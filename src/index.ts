@@ -1,7 +1,20 @@
-import { Context, Schema } from 'koishi'
-import { PrismaClient } from '@prisma/client'
+import {Context, Schema} from 'koishi'
+import {PrismaClient} from '@prisma/client'
 
 export const name = 'cdkey'
+
+// MCStarrySky start -- Recode plugins which are on sale
+const plugins = [
+  'NereusOpusCore',
+  'NereusOpus',
+  'EnchantmentIntensifier',
+  'EnchantIntensifier',
+  'EnchantSeparator',
+  'ExpPump',
+  'DamageSystemEX',
+  'AskExecutions'
+];
+// MCStarrySky end
 
 export interface Config { }
 
@@ -62,6 +75,67 @@ export function apply(ctx: Context) {
 
   ctx.command('keys.ports.remove <cdkey> <data>', "删除绑定端口", { authority: 0 })
     .action(handlePortRemove)
+
+  // MCStarrySky start -- Command of generating new cd-key
+  ctx.command('keys.generate <user> <plugin> <ports>', "增加新用户", { authority: 2 })
+    .example('/keys generate <用户> <插件名> <端口(不填为全端口)>')
+    .action(handleAdminGenerate)
+
+  async function handleAdminGenerate({ session }, user, plugin, ports) {
+    if (!session.isDirect) {
+      await session.bot.deleteMessage(session.channelId, session.messageId)
+      return `${PREFIX}私聊发，你发群里是想让大家都看到你授权码是吗？`
+    }
+
+    if (!user) return `${PREFIX}你不给我用户我哪知道你要给哪个孙子加？`
+    if (!plugin) return `${PREFIX}你要给用户加哪个插件啊，钱不要了是吗？`
+    if (!plugins.includes(plugin)) return `${PREFIX}滚，没这插件`
+
+    if (!ports || ports.trim() == '' || ports.trim == ",") ports = '25565' // MCStarrySky -- Defaults to unlimited ports
+    if (!isValidFormat(ports) && ports != '25565') return `${PREFIX}你端口发的什么sb玩意？`
+    if (ports.split(',').length > 5) return `${PREFIX}最多就五个端口，你想给几个？`
+
+    const cdkey = generateRandomString(32)
+
+    try {
+      await prisma.cdkeys.create({
+        data: {
+          cdkey: cdkey,
+          owner: user,
+          plugin: plugin,
+          ip: '127.0.0.1',
+          ports: ports
+        }
+      })
+      callback()
+
+      const message = `
+${PREFIX}
+感谢您购买 ${plugin}，
+并支持夏日冰熊开发组！
+
+=== 以下是您的购买信息 ===
+>  插件序列码：${cdkey}
+>  绑定 IP：127.0.0.1
+>  绑定端口: ${ports == '-1' ? "全端口" : ports}
+=== 以上是您的购买信息 ===
+
+如需更改绑定 IP 和端口，
+请联系群内机器人「夏日狗熊」输入「/keys」命令查看命令帮助信息。
+${new Date().toLocaleDateString()}
+      `;
+
+      try {
+        await session.bot.sendPrivateMessage(user, message);
+      } catch (_) {
+      }
+
+      return message;
+    } catch (e) {
+      error(logger, e)
+    }
+  }
+  // MCStarrySky end
 
   async function handleIpUpdate({ session }, cdkey, newdata) {
     if (!session.isDirect) {
@@ -239,4 +313,23 @@ export function apply(ctx: Context) {
   async function callback() {
     await prisma.$disconnect()
   }
+
+  // MCStarrySky start -- Generating random String
+  function generateRandomString(length: number): string {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  }
+  // MCStarrySky end
+
+  // MCStarrySky start -- check the number is valid or not
+  function isValidFormat(input: string): boolean {
+    const regex = /^\d+(,\d+)*$/;
+    return regex.test(input.trim());
+  }
+  // MCStarrySky end
 }
