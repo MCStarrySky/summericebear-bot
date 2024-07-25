@@ -91,7 +91,7 @@ export function apply(ctx: Context) {
     if (!plugin) return `${PREFIX}你要给用户加哪个插件啊，钱不要了是吗？`
     if (!plugins.includes(plugin)) return `${PREFIX}滚，没这插件`
 
-    if (!ports || ports.trim() == '' || ports.trim == ",") ports = '25565' // MCStarrySky -- Defaults to unlimited ports
+    if (!ports || ports.trim() == '' || ports.trim == ",") ports = '25565' // MCStarrySky -- Defaults to 25565 (limited ports)
     if (!isValidFormat(ports) && ports != '25565') return `${PREFIX}你端口发的什么sb玩意？`
     if (ports.split(',').length > 5) return `${PREFIX}最多就五个端口，你想给几个？`
 
