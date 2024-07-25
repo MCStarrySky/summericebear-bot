@@ -33,7 +33,9 @@ export function apply(ctx: Context) {
           msg += `${index + 1} - ${res.plugin}\n`
           msg += `\t序列码: ${res.cdkey}\n`
           msg += `\t对应ip/域名: ${res.ip}\n`
-          msg += res.ports === '-1' ? `\t对应端口: 全端口\n\n` : `\t对应端口: ${res.ports}\n\n`
+          // MCStarrySky start -- Optimize the message
+          msg += res.ports === '-1' ? `\t对应端口: 全端口\n\n` : `\t对应端口: ${res.ports.length == 0 ? "目前未绑定任何端口" : res.ports}\n\n`
+          // MCStarrySky end
         })
         callback()
         return msg
@@ -50,8 +52,10 @@ export function apply(ctx: Context) {
     .example('keys ip 114514aaaa1919810bbbb 114.514.1919.810\n    将你名下的授权码绑定ip改为114.514.1919.810')
     .action(handleIpUpdate)
 
+  // MCStarrySky start -- Optimize the message
   ctx.command('keys.ports', "端口管理", { authority: 0 })
-    .example('keys.ports.add 114514aaaa1919810bbbb 1919\n  为你名下的授权码增加绑定端口1919\n    keys.ports.remove 114514aaaa1919810bbbb 1919\n  为你名下的授权码删除绑定端口1919')
+    .example('/keys ports add 114514aaaa1919810bbbb 1919\n   为你名下的授权码增加绑定端口1919\n    /keys ports remove 114514aaaa1919810bbbb 1919\n   为你名下的授权码删除绑定端口1919')
+  // MCStarrySky end
 
   ctx.command('keys.ports.add <cdkey> <newdata>', "增加绑定端口", { authority: 0 })
     .action(handlePortAdd)
@@ -130,7 +134,17 @@ export function apply(ctx: Context) {
         callback()
         return '全端口产品不支持修改端口'
       }
-      const ports = originalData.ports.split(',')
+      // MCStarrySky start -- Make ports to be not const and check the length 
+      //                      in order to prevent the situation that the 'originalData.ports' is empty but ports contains 1 element
+      let portsStr = originalData.ports
+      if (portsStr.startsWith(',')) {
+        portsStr = portsStr.substring(1)
+      }
+      let ports = portsStr.split(',')
+      if (portsStr.trim().length == 0) {
+        ports = []
+      }
+      // MCStarrySky end
       if (ports.length === 5) return '端口已达上限'
       if (ports.includes(newdata)) return `端口已存在: ${originalData.ports}`
       ports.push(newdata)
@@ -178,7 +192,17 @@ export function apply(ctx: Context) {
         callback()
         return '全端口产品不支持修改端口'
       }
-      const ports = originalData.ports.split(',')
+      // MCStarrySky start -- Make ports to be not const and check the length 
+      //                      in order to prevent the situation that the 'originalData.ports' is empty but ports contains 1 element
+      let portsStr = originalData.ports
+      if (portsStr.startsWith(',')) {
+        portsStr = portsStr.substring(1)
+      }
+      let ports = portsStr.split(',')
+      if (portsStr.trim().length == 0) {
+        ports = []
+      }
+      // MCStarrySky end
       if (!ports.includes(data)) {
         callback()
         return `端口不存在: ${originalData.ports}`
@@ -194,8 +218,14 @@ export function apply(ctx: Context) {
           ports: newPorts.join(',')
         }
       })
+      // MCStarrySky start -- Optimize the message
+      let current = newPorts.join(',')
+      if (current.length == 0) {
+        current = "目前未绑定任何端口"
+      }
+      // MCStarrySky end
       callback()
-      return `已为 ${cdkey}(${originalData.plugin}) 删除 绑定端口 ${data}\n目前可用端口: ${newPorts.join(',')}`
+      return `已为 ${cdkey}(${originalData.plugin}) 删除 绑定端口 ${data}\n目前可用端口: ${current}` // MCStarrySky -- Optimize the message
     } catch (e) {
       error(logger, e)
     }
